@@ -7,7 +7,7 @@ Created on Fri Apr  7 15:21:06 2023
 import asyncio
 import edge_tts
 
-async def async_function(voice,text,rate,volume,webvtt='output/字幕.vtt',output_file='output/test.mp3') -> None:
+async def async_function(voice,text,rate,volume,webvtt='output/caption.vtt',output_file='output/audio.mp3') -> None:
         rate = f"{rate}%"
         volume = f"{volume}%"
         communicate = edge_tts.Communicate(text, voice,rate=rate,volume=volume)
