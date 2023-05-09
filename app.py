@@ -4,9 +4,14 @@ Created on Fri Apr  7 10:38:32 2023
 
 @author: shangfr
 """
+    
+import io
 import os
 import streamlit as st
+from PIL import Image
 from tts_script import tts
+from movie import MP324
+
 
 if "complete" not in st.session_state:
     st.session_state.complete = False
@@ -41,6 +46,18 @@ with st.sidebar:
         audio_bytes = audio_file.read()
     st.audio(audio_bytes, format="audio/mp3")
 
+    st.caption("上传图片进行视频制作.")
+    uploaded_files = st.file_uploader(
+        "上传图片", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
+
+    image_list = list()
+    for uploaded_file in uploaded_files:
+        bytes_data = uploaded_file.read()
+        # .resize((800, 800), Image.ANTIALIAS)
+        image = Image.open(io.BytesIO(bytes_data))
+        image_list.append(image)
+
+
 txt = st.text_area(':green[**在线文字转语音**]', '''制作教程
 ⚙️ 步骤1：在这里输入或者粘贴要转换的文本
 ⚙️ 步骤2：选择你想要的不同语音配置
@@ -69,10 +86,24 @@ with open('output/caption.vtt', 'r', encoding='UTF-8') as caption_file:
     captions = caption_file.read()
 
 col11, col12, col13 = st.columns([8, 1, 1])
-col11.success('语音合成已完成。', icon="👇")
+col11.success('合成已完成。', icon="👇")
 col12.caption('')
 col13.caption('')
 col12.download_button('📥', audio_bytes, file_name='audio.mp3', help='音频下载')
 col13.download_button('🧾', captions, file_name='caption.vtt', help='字幕下载')
 
-st.audio(audio_bytes, format="audio/mp3")
+#st.audio(audio_bytes, format="audio/mp3")
+
+
+# input("Enter the Path of the Folder containing Images: ")
+folder_path = 'output/images'
+audio_path = 'output/audio.mp3'  # input("Enter the Path of the MP3 file: ")
+# input("Enter the Path followed by name of the Video to be created: ")
+video_path_name = 'output/video.mp4'
+
+# Invoking the parameterized constructor of the MP3ToMP4 class.
+MP324(image_list, folder_path, audio_path, video_path_name)
+with open('output/video.mp4', 'rb') as video_file:
+    video_bytes = video_file.read()
+
+st.video(video_bytes)
