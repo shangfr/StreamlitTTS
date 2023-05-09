@@ -12,7 +12,6 @@ from PIL import Image
 from tts_script import tts
 from movie import MP324
 
-
 if "complete" not in st.session_state:
     st.session_state.complete = False
 
