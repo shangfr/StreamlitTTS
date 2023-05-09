@@ -72,13 +72,17 @@ if st.session_state['generated']:
         else:
             st.success(ans, icon="🤖")
             
-            ans_list = ans.split("。")
-            if len(ans_list)>5:
-                ans_list = ans_list[:5]
-            for PROMPT in [r for r in ans_list if r.strip()]:
-                url_lst = image_create(PROMPT)
-                
-            md_img = [f"![图片]({url})" for url in url_lst]
-            st.markdown('\n\n'.join(md_img))
-
 st.text_input("**请输入问题 👇**", key="input", on_change=input_and_clear)
+
+
+agree = st.sidebar.checkbox('生成图片')
+
+if agree:
+    ans_list = ans.split("。")
+    if len(ans_list)>5:
+        ans_list = ans_list[:5]
+    for PROMPT in [r for r in ans_list if r.strip()]:
+        url_lst = image_create(PROMPT)
+        
+    md_img = [f"![图片]({url})" for url in url_lst]
+    st.markdown('\n\n'.join(md_img))
