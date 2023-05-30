@@ -101,6 +101,10 @@ audio_path = 'output/audio.mp3'  # input("Enter the Path of the MP3 file: ")
 video_path_name = 'output/video.mp4'
 
 # Invoking the parameterized constructor of the MP3ToMP4 class.
+if len(image_list)== 0:
+    st.audio(audio_bytes, format="audio/mp3")
+    st.warning('请先上传图片进行视频合成。', icon="👈")
+    st.stop()
 MP324(image_list, folder_path, audio_path, video_path_name)
 with open('output/video.mp4', 'rb') as video_file:
     video_bytes = video_file.read()
