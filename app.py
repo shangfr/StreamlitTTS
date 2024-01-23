@@ -71,7 +71,7 @@ if not st.session_state.complete:
 with open('output/audio.mp3', 'rb') as audio_file:
     audio_bytes = audio_file.read()
 
-with open('output/caption.vtt', 'r', encoding='UTF-8') as caption_file:
+with open('output/audio.vtt', 'r', encoding='UTF-8') as caption_file:
     captions = caption_file.read()
 
 col11, col12, col13 = st.columns([8, 1, 1])
@@ -79,13 +79,10 @@ col11.success('文本转语音已完成。', icon="👇")
 col12.caption('')
 col13.caption('')
 col12.download_button('📥', audio_bytes, file_name='audio.mp3', help='音频下载')
-col13.download_button('🧾', captions, file_name='caption.vtt', help='字幕下载')
+col13.download_button('🧾', captions, file_name='audio.vtt', help='字幕下载')
 
 st.audio(audio_bytes, format="audio/mp3")
 
-folder_path = 'output/images'
-audio_path = 'output/audio.mp3'
-video_path_name = 'output/video.mp4'
 
 container = st.container()
 uploaded_files = st.file_uploader(
@@ -103,8 +100,16 @@ for uploaded_file in uploaded_files:
 if len(image_list)== 0:
     container.warning('上传图片进行视频合成。', icon="👇")
     st.stop()
-MP324(image_list, folder_path, audio_path, video_path_name)
-with open(video_path_name, 'rb') as video_file:
+
+movie = st.button('⚙️ 合成视频', use_container_width=True, help='语音合成')
+title = 'TESTTESTTEST'
+output_folder_path = "output"
+
+if movie:
+    with st.spinner('正在合成...'):
+        MP324(image_list,title, output_folder_path)
+
+with open(output_folder_path+'/video.mp4', 'rb') as video_file:
     video_bytes = video_file.read()
 
 st.video(video_bytes)

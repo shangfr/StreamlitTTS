@@ -4,20 +4,43 @@ Created on Tue May  9 15:31:28 2023
 
 @author: shangfr
 """
-
+import numpy as np
 from PIL import Image
 from pathlib import Path
 from moviepy import editor
+from moviepy.video.tools.subtitles import SubtitlesClip
 
 '''
 Creating class MP3ToMP4 which contains methods to convert
 an audio to a video using a list of images.
 '''
 
+def file_to_subtitles(filename):
+    import webvtt
+    """ Converts a srt file into subtitles.
+
+    The returned list is of the form ``[((ta,tb),'some text'),...]``
+    and can be fed to SubtitlesClip.
+
+    Only works for '.srt' format for the moment.
+    """
+    times_texts = []
+    current_times = None
+    current_text = ""
+    
+    subtitles = webvtt.read(filename)
+
+    for subtitle in subtitles:
+        current_times = [subtitle.start_in_seconds,subtitle.end_in_seconds]
+        current_text = subtitle.text.strip('\n')
+        times_texts.append((current_times, current_text))
+
+        
+    return times_texts
 
 class MP324:
 
-    def __init__(self,img_list, folder_path, audio_path, video_path_name):
+    def __init__(self,img_list,title, output_folder_path):
         """
         :param folder_path: contains the path of the root folder.
         :param audio_path: contains the path of the audio (mp3 file).
@@ -25,26 +48,20 @@ class MP324:
                                 video will be saved along with the
                                 name of the created video.
         """
-        self.img_list = img_list
-        self.folder_path = folder_path
-        self.audio_path = audio_path
-        self.video_path_name = video_path_name
+        self.title = title
+        self.folder_path = output_folder_path+'/images'
+        self.audio_path = output_folder_path+'/audio.mp3'
+        self.video_path_name = output_folder_path+'/video.mp4'
+      
+        self.audio = editor.AudioFileClip(self.audio_path)
+        if not img_list:
+            self.img_list = self.get_images()
+        else:
+            self.img_list = img_list
+            
 
         # Calling the create_video() method.
         self.create_video()
-
-    def get_length(self):
-        """
-        This method reads an MP3 file and calculates its length
-        in seconds.
-
-        :return: length of the MP3 file
-        """
-        #song = MP3(self.audio_path)
-
-        self.audio = editor.AudioFileClip(self.audio_path)
-        
-        return int(self.audio.duration)
 
     def get_images(self):
         """
@@ -65,6 +82,27 @@ class MP324:
             image_list.append(image)
         return image_list
 
+    def get_subtitles(self):
+        """
+        set_position:設置文字顯示位置【屏幕左上角为(0, 0)，右下角为(屏幕宽度, 屏幕高度)】
+            1、set_position((800, 500)): 显示在800, 500的位置上
+            2、set_position(("center", "center")): 显示在屏幕的正中央
+            3、set_position((0.4, 0.6), True): 显示在距离左边百分之40、距离上边百分之60的位置上
+        set_duration(10): 持续10秒
+        set_opacity(0.6): 设置透明度为0.6
+        set_start(5)：设置开始显示的时间点
+        set_end(10):设置结束的时间点
+        """
+        # 创建字幕剪辑
+        vtt_path = self.audio_path.replace("mp3","vtt")
+        subtitles = file_to_subtitles(vtt_path)
+
+        generator = lambda txt: editor.TextClip(txt, font='output/STKAITI.TTF', fontsize=50, color='green', transparent=True)
+        
+        subtitles_clip = SubtitlesClip(subtitles, generator)
+        return subtitles_clip
+        
+
     def create_video(self):
         """
         This method calls the get_length() and get_images()
@@ -75,17 +113,37 @@ class MP324:
 
         :return: None
         """
-        length_audio = self.get_length()
-        image_list = self.img_list
-        duration = int(length_audio / len(image_list)) * 1000
-        image_list[0].save(self.folder_path + "/temp.gif",
-                           save_all=True,
-                           append_images=image_list[1:],
-                           duration=duration)
-
-        # Calling the combine_audio() method.
-        self.combine_audio()
-
+        # Import the audio(Insert to location of your audio instead of audioClip.mp3)
+        
+        #image_clip = ImageClip(str(images[0]))
+        
+        
+        images = [np.array(img) for img in self.img_list]
+        img_duration = self.audio.duration/len(images)
+        
+        image_clip = [editor.ImageClip(m).set_duration(img_duration) for m in images]
+        concat_clip = editor.concatenate_videoclips(image_clip, method="compose")
+        
+        
+        # Generate a text clip 
+        text_clip = editor.TextClip(txt=self.title,
+                             size=(.5*image_clip[0].size[0], 0),
+                             font='STKAITI.TTF',
+                             color="#00CD00")
+        
+        im_width, im_height = text_clip.size
+        title_bg_clip = editor.ImageClip("output/title_bubble.png").resize((int(im_width*1.5),int(im_height*1.5)))
+          
+        #color_clip = editor.ColorClip(size=(int(im_width*1.2), int(im_height*1.1)), color=(0, 255, 255))
+        title_clip = editor.CompositeVideoClip([title_bg_clip.set_opacity(.8), text_clip.set_position('center')])
+        
+        subtitles_clip = self.get_subtitles()
+        
+        conten_clip = editor.CompositeVideoClip([concat_clip, title_clip.set_position('center').set_duration(2).crossfadeout(1), subtitles_clip.set_position('bottom')]).set_duration(self.audio.duration)
+        output_video = conten_clip.set_audio(self.audio)
+        output_video.write_videofile(self.video_path_name, fps=1)
+        
+        
     def combine_audio(self):
         """
         This method attaches the audio to the gif file created.
@@ -102,15 +160,25 @@ class MP324:
         final_video.write_videofile(self.video_path_name, fps=60)
 
 
+    def create_gif(self):
+        """
+        This method calls the get_length() and get_images()
+        :return: None
+        """
+        length_audio = self.get_length()
+        image_list = self.img_list
+        duration = int(length_audio / len(image_list)) * 1000
+        image_list[0].save(self.folder_path + "/temp.gif",
+                           save_all=True,
+                           append_images=image_list[1:],
+                           duration=duration)
 
 
 
 
 if __name__ == '__main__':
-    # Taking the input for the paths of the variables mentioned below.
-    folder_path = 'picture'#input("Enter the Path of the Folder containing Images: ")
-    audio_path = 'audio.mp3'#input("Enter the Path of the MP3 file: ")
-    video_path_name = 'ttt.mp4'#input("Enter the Path followed by name of the Video to be created: ")
 
+    title  = 'TEST'
+    output_folder_path = 'output'
     # Invoking the parameterized constructor of the MP3ToMP4 class.
-    MP324(folder_path, audio_path, video_path_name)
+    MP324([],title, output_folder_path)
